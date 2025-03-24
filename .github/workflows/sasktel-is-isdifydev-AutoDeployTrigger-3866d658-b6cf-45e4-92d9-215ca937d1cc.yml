@@ -1,0 +1,48 @@
+name: Trigger auto deployment for sasktel-is-isdifydev
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/sasktel-is-isdifydev-AutoDeployTrigger-3866d658-b6cf-45e4-92d9-215ca937d1cc.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.SASKTELISISDIFYDEV_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.SASKTELISISDIFYDEV_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.SASKTELISISDIFYDEV_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          registryUrl: saskteliscontreg.azurecr.io
+          registryUsername: ${{ secrets.SASKTELISISDIFYDEV_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.SASKTELISISDIFYDEV_REGISTRY_PASSWORD }}
+          containerAppName: sasktel-is-isdifydev
+          resourceGroup: Sasktel-IS-AI-DevPOC
+          imageToBuild: saskteliscontreg.azurecr.io/sasktel-is-isdifydev:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
